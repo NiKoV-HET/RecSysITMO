@@ -1,5 +1,6 @@
-from pydantic import BaseSettings
-import os
+from pydantic import BaseSettings, Field
+
+# import os
 
 
 class Config(BaseSettings):
@@ -21,7 +22,7 @@ class LogConfig(Config):
 class ServiceConfig(Config):
     service_name: str = "reco_service"
     k_recs: int = 10
-    api_key: str = os.getenv("API_KEY", "api")
+    api_key: str = Field(..., env="API_KEY")
 
     log_config: LogConfig
 
