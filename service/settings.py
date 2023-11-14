@@ -1,30 +1,22 @@
-from pydantic import BaseSettings, Field
-
-# import os
+from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import Field
 
 
 class Config(BaseSettings):
-    class Config:
-        case_sensitive = False
+    model_config = SettingsConfigDict(case_sensitive=False)
 
 
 class LogConfig(Config):
+    model_config = SettingsConfigDict(case_sensitive=False, env_prefix="log_")
     level: str = "INFO"
     datetime_format: str = "%Y-%m-%d %H:%M:%S"
-
-    class Config:
-        case_sensitive = False
-        fields = {
-            "level": {"env": ["log_level"]},
-        }
 
 
 class ServiceConfig(Config):
     service_name: str = "reco_service"
     k_recs: int = 10
-    api_key: str = Field(..., env="API_KEY")
-
     log_config: LogConfig
+    api_key: str = Field(default=None, env="API_KEY")
 
 
 def get_config() -> ServiceConfig:

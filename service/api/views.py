@@ -23,7 +23,7 @@ class RecoResponse(BaseModel):
     items: List[int]
 
 
-models: Dict[str, Any] = {"model_1": 0, "model_2": 0}
+models: Dict[str, Any] = {"random": 0}
 
 
 router = APIRouter()
@@ -70,13 +70,11 @@ async def get_reco(
     if model_name not in models:
         raise ModelNotFoundError(error_message=f"Model {model_name} not found")
 
-    if model_name == "model_1":
+    if model_name == "random":
         k_recs = request.app.state.k_recs
         reco = list(range(k_recs))
     else:
-        raise ModelNotImplementedError(
-            error_message=f"Model {model_name} not implemented"
-        )
+        raise ModelNotImplementedError(error_message=f"Model {model_name} not implemented")
 
     return RecoResponse(user_id=user_id, items=reco)
 
