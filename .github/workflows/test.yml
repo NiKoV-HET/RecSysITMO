@@ -6,6 +6,8 @@ on:
   pull_request:
     types: [opened, synchronize]
 
+env:
+  API_KEY: ${{secrets.API_KEY}}
 
 jobs:
   test:
