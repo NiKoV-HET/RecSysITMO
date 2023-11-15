@@ -1,20 +1,10 @@
-from typing import List, Dict, Any
+from typing import Any, Dict, List
 
-from fastapi import (
-    APIRouter,
-    FastAPI,
-    Request,
-    HTTPException,
-    Depends,
-)
+from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
 
-from service.api.exceptions import (
-    UserNotFoundError,
-    ModelNotFoundError,
-    ModelNotImplementedError,
-)
+from service.api.exceptions import ModelNotFoundError, ModelNotImplementedError, UserNotFoundError
 from service.log import app_logger
 
 
@@ -23,7 +13,7 @@ class RecoResponse(BaseModel):
     items: List[int]
 
 
-models: Dict[str, Any] = {"random": 0}
+models: Dict[str, Any] = {"random": 0, "model_1": 0}
 
 
 router = APIRouter()
