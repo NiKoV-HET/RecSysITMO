@@ -13,9 +13,7 @@ def service_config() -> ServiceConfig:
 
 
 @pytest.fixture
-def app(
-    service_config: ServiceConfig,
-) -> FastAPI:
+def app(service_config: ServiceConfig) -> FastAPI:
     app = create_app(service_config)
     return app
 
