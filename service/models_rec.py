@@ -1,100 +1,75 @@
 import os
 import pickle
-from typing import Any
+from typing import List, Optional
 
 import pandas as pd
 
 
-class PopularModel:
-    pop_recs = []
-    model_loaded = False
-
-    def __init__(self, path_to_recs="service/models/pop_recs.pkl") -> None:
-        if os.path.exists(path_to_recs):
-            with open(path_to_recs, "rb") as file:
-                pop_recs = pickle.load(file)
-                self.model_loaded = True
-            self.pop_recs_list = list(pop_recs["item_id"].unique())
-
-    def __call__(self, _="", k_recs=10) -> Any:
-        if self.model_loaded:
-            return self.pop_recs_list[:k_recs]
-        return list(range(k_recs))[:k_recs]
-
-
 class BaseModel:
-    popular_recs = PopularModel()()
+    def __init__(self, path_to_model: Optional[str] = None) -> None:
+        self.model_loaded: bool = False
+        self.model = None
 
-    def fill_recs_popular(self, recs, k_recs) -> list:
-        if k_recs - len(recs) > 0:
-            new_recs = filter(lambda x: x not in recs, self.popular_recs)
+        if path_to_model and os.path.exists(path_to_model):
+            try:
+                with open(path_to_model, "rb") as file:
+                    self.model = pickle.load(file)
+                    self.model_loaded = True
+            except Exception as e:
+                print(f"Error loading model: {e}")
+
+    def fill_recs_popular(self, recs: List[int], k_recs: int, popular_recs: List[int]) -> List[int]:
+        recs = recs.copy()
+        needed = k_recs - len(recs)
+        if needed > 0:
+            new_recs = [rec for rec in popular_recs if rec not in recs][:needed]
             recs.extend(new_recs)
-        return recs[:k_recs]
+        return recs
 
-    def mok_predict(self, k_recs) -> list:
+    def mock_predict(self, k_recs: int) -> List[int]:
         return list(range(k_recs))
 
 
-class KNNOfflineModel(BaseModel):
-    model_loaded = False
+class RangeModel(BaseModel):
+    def recommend(self, k_recs=10, *args, **kwargs):
+        return self.mock_predict(k_recs)
 
-    def __init__(self, path_to_recs) -> None:
-        if os.path.exists(path_to_recs):
-            with open(path_to_recs, "rb") as file:
-                self.userknn_predect_result = pickle.load(file)
-                self.model_loaded = True
 
-    def __call__(self, user_id, k_recs=10, fill_empty_recs=True) -> list:
+class PopularModel(BaseModel):
+    def __init__(self, path_to_recs: str = "service/models/pop_recs.pkl") -> None:
+        super().__init__(path_to_recs)
+        self.pop_recs_list: List[int] = []
+
         if self.model_loaded:
-            if user_id in self.userknn_predect_result:
-                recs = self.userknn_predect_result[user_id][:k_recs]
-            else:
-                recs = []
+            self.pop_recs_list = list(self.model["item_id"].unique())
 
-            if fill_empty_recs:
-                recs = self.fill_recs_popular(recs, k_recs)
+    def recommend(self, k_recs: int = 10, *args, **kwargs) -> List[int]:
+        return self.pop_recs_list[:k_recs] if self.model_loaded else self.mock_predict(k_recs)
 
+
+class KNNOfflineModel(BaseModel):
+    def recommend(
+        self, user_id: int, k_recs: int = 10, fill_empty_recs: bool = True, popular_model: PopularModel = None
+    ) -> List[int]:
+        if self.model_loaded and isinstance(self.model, dict):
+            recs = self.model.get(user_id, [])[:k_recs]
+            if fill_empty_recs and popular_model:
+                recs = self.fill_recs_popular(recs, k_recs, popular_model.recommend())
             return recs
-        return self.mok_predict(k_recs)
+        return self.mock_predict(k_recs)
 
 
 class KNNOnlineModel(BaseModel):
-    model_loaded = False
-
-    def __init__(self, path_to_model) -> None:
-        if os.path.exists(path_to_model):
-            with open(path_to_model, "rb") as file:
-                self.userknn_model = pickle.load(file)
-                self.model_loaded = True
-
-    def __call__(self, user_id, k_recs=10, fill_empty_recs=True) -> list:
-        if self.model_loaded:
-            if user_id in (self.userknn_model.users_mapping):
-                recs = self.userknn_model.predict(pd.DataFrame([user_id], columns=["user_id"]))["item_id"].to_list()[
-                    :k_recs
-                ]
+    def recommend(
+        self, user_id: int, k_recs: int = 10, fill_empty_recs: bool = True, popular_model: PopularModel = None
+    ) -> List[int]:
+        if self.model_loaded and hasattr(self.model, "users_mapping") and hasattr(self.model, "predict"):
+            if user_id in self.model.users_mapping:
+                recs = self.model.predict(pd.DataFrame([user_id], columns=["user_id"]))["item_id"].to_list()[:k_recs]
             else:
                 recs = []
 
-            if fill_empty_recs:
-                recs = self.fill_recs_popular(recs, k_recs)
-
+            if fill_empty_recs and popular_model:
+                recs = self.fill_recs_popular(recs, k_recs, popular_model.recommend())
             return recs
-        return self.mok_predict(k_recs)
-
-
-if __name__ == "__main__":
-    user_id_t = 21
-    k_recs_t = 10
-    validate_input = [1, 2, 3, 4, 5]
-
-    popular_model = PopularModel()
-    knn_offline_model = KNNOfflineModel("service/models/userknn_predect_offline.pkl")
-    knn_online_model = KNNOnlineModel("service/models/userknn_model.pkl")
-    base_model = BaseModel()
-    base_result = base_model.fill_recs_popular(validate_input, k_recs_t)
-
-    print(f"[KNN online] k_recs:{k_recs_t}, user_id:{user_id_t}. Output: {knn_online_model(user_id_t, k_recs_t)}")
-    print(f"[KNN offline] k_recs:{k_recs_t}, user_id:{user_id_t}. Output: {knn_offline_model(user_id_t, k_recs_t)}")
-    print(f"[Popular] k_recs:{k_recs_t}, user_id:{user_id_t}. Output: {popular_model(k_recs_t)}")
-    print(f"[Validate] input {validate_input}, k_recs:{k_recs_t}. Output:{base_result}")
+        return self.mock_predict(k_recs)
