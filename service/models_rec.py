@@ -4,6 +4,8 @@ from typing import List, Optional
 
 import pandas as pd
 
+from userknn import UserKnn
+
 
 class BaseModel:
     def __init__(self, path_to_model: Optional[str] = None) -> None:
@@ -15,8 +17,8 @@ class BaseModel:
                 with open(path_to_model, "rb") as file:
                     self.model = pickle.load(file)
                     self.model_loaded = True
-            except Exception as e:
-                print(f"Error loading model: {e}")
+            except IOError:
+                print(f"I/O error occurred trying to open: {path_to_model}")
 
     def fill_recs_popular(self, recs: List[int], k_recs: int, popular_recs: List[int]) -> List[int]:
         recs = recs.copy()
@@ -31,7 +33,7 @@ class BaseModel:
 
 
 class RangeModel(BaseModel):
-    def recommend(self, k_recs=10, *args, **kwargs):
+    def recommend(self, *args, k_recs=10, **kwargs):
         return self.mock_predict(k_recs)
 
 
@@ -43,7 +45,7 @@ class PopularModel(BaseModel):
         if self.model_loaded:
             self.pop_recs_list = list(self.model["item_id"].unique())
 
-    def recommend(self, k_recs: int = 10, *args, **kwargs) -> List[int]:
+    def recommend(self, *args, k_recs: int = 10, **kwargs) -> List[int]:
         return self.pop_recs_list[:k_recs] if self.model_loaded else self.mock_predict(k_recs)
 
 
@@ -63,7 +65,7 @@ class KNNOnlineModel(BaseModel):
     def recommend(
         self, user_id: int, k_recs: int = 10, fill_empty_recs: bool = True, popular_model: PopularModel = None
     ) -> List[int]:
-        if self.model_loaded and hasattr(self.model, "users_mapping") and hasattr(self.model, "predict"):
+        if self.model_loaded and isinstance(self.model, UserKnn):
             if user_id in self.model.users_mapping:
                 recs = self.model.predict(pd.DataFrame([user_id], columns=["user_id"]))["item_id"].to_list()[:k_recs]
             else:
