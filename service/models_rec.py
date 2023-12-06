@@ -2,12 +2,12 @@ import os
 import pickle
 from typing import List, Optional
 
+import nmslib
 import pandas as pd
-
-from userknn import UserKnn
 from lightfm import LightFM
 from rectools.tools.ann import UserToItemAnnRecommender
-import nmslib
+
+from userknn import UserKnn
 
 
 class BaseModel:

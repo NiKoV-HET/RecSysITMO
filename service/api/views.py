@@ -6,7 +6,7 @@ from pydantic import BaseModel
 
 from service.api.exceptions import ModelNotFoundError, ModelNotImplementedError, UserNotFoundError
 from service.log import app_logger
-from service.models_rec import KNNOfflineModel, KNNOnlineModel, PopularModel, RangeModel, ALSANNOnlineModel
+from service.models_rec import ALSANNOnlineModel, KNNOfflineModel, KNNOnlineModel, PopularModel, RangeModel
 
 
 class RecoResponse(BaseModel):
@@ -16,6 +16,7 @@ class RecoResponse(BaseModel):
 
 models: Dict[str, Any] = {
     "random": RangeModel(),
+    "model_1": None,
     "popular": PopularModel(),
     "knn_online": KNNOnlineModel("service/models/userknn_model.pkl"),
     "knn_offline": KNNOfflineModel("service/models/userknn_predect_offline.pkl"),
