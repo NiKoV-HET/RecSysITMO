@@ -76,3 +76,5 @@ run: build
 all: setup format lint test run
 
 .DEFAULT_GOAL = all
+
+# uvicorn main:app --host 0.0.0.0 --port 8000  --reload

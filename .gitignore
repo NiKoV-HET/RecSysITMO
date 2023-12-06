@@ -68,3 +68,4 @@ venv.bak/
 
 
 data
+service/models/*
