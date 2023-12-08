@@ -103,23 +103,28 @@ class LightFMOnlineModel(BaseModel):
 class ALSANNOnlineModel(BaseModel):
     def __init__(self, path_to_recs: str) -> None:
         super().__init__(path_to_recs)
+        self.model_loaded = False
 
-        self.user_vectors, self.item_vectors = self.model.get_vectors()
-        with open("service/models/als_user_id_map.pkl", "rb") as file:
-            self.user_id_map = pickle.load(file)
-        with open("service/models/als_item_id_map.pkl", "rb") as file:
-            self.item_id_map = pickle.load(file)
+        path_to_user_id_map = "service/models/als_user_id_map.pkl"
+        path_to_item_id_map = "service/models/als_item_id_map.pkl"
+        if os.path.exists(path_to_user_id_map) and os.path.exists(path_to_item_id_map):
+            self.user_vectors, self.item_vectors = self.model.get_vectors()
+            with open(path_to_user_id_map, "rb") as file:
+                self.user_id_map = pickle.load(file)
+            with open(path_to_item_id_map, "rb") as file:
+                self.item_id_map = pickle.load(file)
 
-        index_init_params = {"method": "hnsw", "space": "negdotprod", "data_type": nmslib.DataType.DENSE_VECTOR}
-        self.ann = UserToItemAnnRecommender(
-            user_vectors=self.user_vectors,
-            item_vectors=self.item_vectors,
-            user_id_map=self.user_id_map,
-            item_id_map=self.item_id_map,
-            index_init_params=index_init_params,
-        )
+            index_init_params = {"method": "hnsw", "space": "negdotprod", "data_type": nmslib.DataType.DENSE_VECTOR}
+            self.ann = UserToItemAnnRecommender(
+                user_vectors=self.user_vectors,
+                item_vectors=self.item_vectors,
+                user_id_map=self.user_id_map,
+                item_id_map=self.item_id_map,
+                index_init_params=index_init_params,
+            )
 
-        self.ann.index.loadIndex("service/models/als_ann_index")
+            self.ann.index.loadIndex("service/models/als_ann_index")
+            self.model_loaded = True
 
     def recommend(
         self, user_id: int, k_recs: int = 10, fill_empty_recs: bool = True, popular_model: PopularModel = None
