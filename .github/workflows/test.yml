@@ -34,11 +34,23 @@ jobs:
         with:
           path: .venv
           key: venv-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
-  
+
+      - name: Install setuptools and wheel
+        if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+        run: poetry run pip install setuptools wheel
+
+      - name: Install lightfm
+        if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+        run: poetry run pip install lightfm==1.17 --no-use-pep517
+
       - name: Install dependencies
         if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
-        run: poetry run pip install setuptools wheel && poetry run pip install lightfm==1.17 --no-use-pep517 && poetry install 
+        run: poetry install 
       
+      - name: Fix nmslib for git CPU
+        if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+        run: poetry run pip install --no-binary ":all:" nmslib
+
       - name: Run tests
         run: make lint
 
