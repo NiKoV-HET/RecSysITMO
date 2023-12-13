@@ -150,7 +150,7 @@ class DSSMMOfflineModel(BaseModel):
     def __init__(self, path_to_recs: str) -> None:
         super().__init__(path_to_recs)
         if self.model_loaded:
-            self.model["item_id"] = self.model["item_id"].apply(lambda x: json.loads(x))
+            self.model["item_id"] = self.model["item_id"].apply(json.loads)
             self.model = self.model.set_index("user_id").to_dict()["item_id"]
 
     def recommend(
@@ -172,7 +172,7 @@ class AutoencoderOfflineModel(BaseModel):
     def __init__(self, path_to_recs: str) -> None:
         super().__init__(path_to_recs)
         if self.model_loaded:
-            self.model["item_id"] = self.model["item_id"].apply(lambda x: json.loads(x))
+            self.model["item_id"] = self.model["item_id"].apply(json.loads)
             self.model = self.model.set_index("user_id").to_dict()["item_id"]
 
     def recommend(
