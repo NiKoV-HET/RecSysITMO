@@ -2,7 +2,10 @@ import os
 import pickle
 from typing import List, Optional
 
+import nmslib
 import pandas as pd
+from lightfm import LightFM
+from rectools.tools.ann import UserToItemAnnRecommender
 
 from userknn import UserKnn
 
@@ -68,6 +71,67 @@ class KNNOnlineModel(BaseModel):
         if self.model_loaded and isinstance(self.model, UserKnn):
             if user_id in self.model.users_mapping:
                 recs = self.model.predict(pd.DataFrame([user_id], columns=["user_id"]))["item_id"].to_list()[:k_recs]
+            else:
+                recs = []
+
+            if fill_empty_recs and popular_model:
+                recs = self.fill_recs_popular(recs, k_recs, popular_model.recommend())
+            return recs
+        return self.mock_predict(k_recs)
+
+
+class LightFMOnlineModel(BaseModel):
+    def __init__(self, path_to_recs: str) -> None:
+        super().__init__(path_to_recs)
+        self.model = self.model.model
+
+    def recommend(
+        self, user_id: int, k_recs: int = 10, fill_empty_recs: bool = True, popular_model: PopularModel = None
+    ) -> List[int]:
+        if self.model_loaded and isinstance(self.model, LightFM):
+            if user_id in self.model.users_mapping:
+                recs = self.model.predict(pd.DataFrame([user_id], columns=["user_id"]))["item_id"].to_list()[:k_recs]
+            else:
+                recs = []
+
+            if fill_empty_recs and popular_model:
+                recs = self.fill_recs_popular(recs, k_recs, popular_model.recommend())
+            return recs
+        return self.mock_predict(k_recs)
+
+
+class ALSANNOnlineModel(BaseModel):
+    def __init__(self, path_to_recs: str) -> None:
+        super().__init__(path_to_recs)
+        self.model_loaded = False
+
+        path_to_user_id_map = "service/models/als_user_id_map.pkl"
+        path_to_item_id_map = "service/models/als_item_id_map.pkl"
+        if os.path.exists(path_to_user_id_map) and os.path.exists(path_to_item_id_map):
+            self.user_vectors, self.item_vectors = self.model.get_vectors()
+            with open(path_to_user_id_map, "rb") as file:
+                self.user_id_map = pickle.load(file)
+            with open(path_to_item_id_map, "rb") as file:
+                self.item_id_map = pickle.load(file)
+
+            index_init_params = {"method": "hnsw", "space": "negdotprod", "data_type": nmslib.DataType.DENSE_VECTOR}
+            self.ann = UserToItemAnnRecommender(
+                user_vectors=self.user_vectors,
+                item_vectors=self.item_vectors,
+                user_id_map=self.user_id_map,
+                item_id_map=self.item_id_map,
+                index_init_params=index_init_params,
+            )
+
+            self.ann.index.loadIndex("service/models/als_ann_index")
+            self.model_loaded = True
+
+    def recommend(
+        self, user_id: int, k_recs: int = 10, fill_empty_recs: bool = True, popular_model: PopularModel = None
+    ) -> List[int]:
+        if self.model_loaded:
+            if user_id in self.user_id_map.external_ids:
+                recs = self.ann.get_item_list_for_user(user_id, k_recs).tolist()
             else:
                 recs = []
 
