@@ -1,3 +1,4 @@
+import json
 import os
 import pickle
 from typing import List, Optional
@@ -17,8 +18,12 @@ class BaseModel:
 
         if path_to_model and os.path.exists(path_to_model):
             try:
-                with open(path_to_model, "rb") as file:
-                    self.model = pickle.load(file)
+                if ".pkl" in path_to_model:
+                    with open(path_to_model, "rb") as file:
+                        self.model = pickle.load(file)
+                        self.model_loaded = True
+                elif ".csv" in path_to_model:
+                    self.model = pd.read_csv(path_to_model)
                     self.model_loaded = True
             except IOError:
                 print(f"I/O error occurred trying to open: {path_to_model}")
@@ -132,6 +137,50 @@ class ALSANNOnlineModel(BaseModel):
         if self.model_loaded:
             if user_id in self.user_id_map.external_ids:
                 recs = self.ann.get_item_list_for_user(user_id, k_recs).tolist()
+            else:
+                recs = []
+
+            if fill_empty_recs and popular_model:
+                recs = self.fill_recs_popular(recs, k_recs, popular_model.recommend())
+            return recs
+        return self.mock_predict(k_recs)
+
+
+class DSSMMOfflineModel(BaseModel):
+    def __init__(self, path_to_recs: str) -> None:
+        super().__init__(path_to_recs)
+        if self.model_loaded:
+            self.model["item_id"] = self.model["item_id"].apply(json.loads)
+            self.model = self.model.set_index("user_id").to_dict()["item_id"]
+
+    def recommend(
+        self, user_id: int, k_recs: int = 10, fill_empty_recs: bool = True, popular_model: PopularModel = None
+    ) -> List[int]:
+        if self.model_loaded:
+            if user_id in self.model:
+                recs = self.model.get(user_id, [])[:k_recs]
+            else:
+                recs = []
+
+            if fill_empty_recs and popular_model:
+                recs = self.fill_recs_popular(recs, k_recs, popular_model.recommend())
+            return recs
+        return self.mock_predict(k_recs)
+
+
+class AutoencoderOfflineModel(BaseModel):
+    def __init__(self, path_to_recs: str) -> None:
+        super().__init__(path_to_recs)
+        if self.model_loaded:
+            self.model["item_id"] = self.model["item_id"].apply(json.loads)
+            self.model = self.model.set_index("user_id").to_dict()["item_id"]
+
+    def recommend(
+        self, user_id: int, k_recs: int = 10, fill_empty_recs: bool = True, popular_model: PopularModel = None
+    ) -> List[int]:
+        if self.model_loaded:
+            if user_id in self.model:
+                recs = self.model.get(user_id, [])[:k_recs]
             else:
                 recs = []
 

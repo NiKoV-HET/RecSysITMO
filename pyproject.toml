@@ -32,6 +32,8 @@ setuptools = "^69.0.2"
 numpy = "^1.26.2"
 nmslib = "^2.1.1"
 optuna = "^3.4.0"
+tensorflow = "2.15.0"
+torch = "^2.1.1"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "7.4.3"
