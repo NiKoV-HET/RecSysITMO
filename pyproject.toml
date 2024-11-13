@@ -10,7 +10,7 @@ packages = [
 ]
 
 [tool.poetry.dependencies]
-python = "^3.8.1"
+python = ">=3.9,<3.11"
 fastapi = "^0.104.0"
 pydantic = "^2.4.2"
 gunicorn = "^21.2.0"
@@ -20,6 +20,20 @@ orjson = "^3.9.10"
 starlette = "^0.27.0"
 httpx = "^0.22.0"  # for starlette.testclient
 pydantic-settings = "^2.0.3"
+rectools = "^0.4.1"
+ipykernel = "^6.26.0"
+ipywidgets = "^8.1.1"
+jinja2 = "^3.1.2"
+implicit = "^0.7.2"
+matplotlib = "^3.8.2"
+seaborn = "^0.13.0"
+lightfm = "1.17"
+setuptools = "^69.0.2"
+numpy = "^1.26.2"
+nmslib = "^2.1.1"
+optuna = "^3.4.0"
+tensorflow = "2.15.0"
+torch = "^2.1.1"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "7.4.3"
@@ -30,6 +44,7 @@ bandit = "^1.7.5"
 flake8 = "^6.1.0"
 pylint = "^3.0.2"
 black = "^23.10.1"
+ipykernel = "^6.26.0"
 
 [tool.black]
 line-length = 120

@@ -6,6 +6,15 @@ from pydantic import BaseModel
 
 from service.api.exceptions import ModelNotFoundError, ModelNotImplementedError, UserNotFoundError
 from service.log import app_logger
+from service.models_rec import (
+    ALSANNOnlineModel,
+    AutoencoderOfflineModel,
+    DSSMMOfflineModel,
+    KNNOfflineModel,
+    KNNOnlineModel,
+    PopularModel,
+    RangeModel,
+)
 
 
 class RecoResponse(BaseModel):
@@ -13,7 +22,16 @@ class RecoResponse(BaseModel):
     items: List[int]
 
 
-models: Dict[str, Any] = {"random": 0, "model_1": 0}
+models: Dict[str, Any] = {
+    "random": RangeModel(),
+    "model_1": None,
+    "popular": PopularModel(),
+    "knn_online": KNNOnlineModel("service/models/userknn_model.pkl"),
+    "knn_offline": KNNOfflineModel("service/models/userknn_predect_offline.pkl"),
+    "als_ann_online": ALSANNOnlineModel("service/models/ALS_Online.pkl"),
+    "dssm_offline": DSSMMOfflineModel("service/models/reco_dssm.csv"),
+    "autoencoder_offline": AutoencoderOfflineModel("service/models/autoencoder_offline.csv"),
+}
 
 
 router = APIRouter()
@@ -60,9 +78,11 @@ async def get_reco(
     if model_name not in models:
         raise ModelNotFoundError(error_message=f"Model {model_name} not found")
 
-    if model_name == "random":
-        k_recs = request.app.state.k_recs
-        reco = list(range(k_recs))
+    k_recs = request.app.state.k_recs
+
+    model = models[model_name]
+    if model:
+        reco = model.recommend(user_id=user_id, k_recs=k_recs, popular_model=models["popular"])
     else:
         raise ModelNotImplementedError(error_message=f"Model {model_name} not implemented")
 
